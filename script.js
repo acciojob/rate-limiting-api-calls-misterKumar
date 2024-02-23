@@ -1,57 +1,64 @@
-  function fetchData() {
-            return fetch("https://jsonplaceholder.typicode.com/todos/1")
-                .then(response => response.json());
-        }
+//your JS code here. If required.
+let clickCount = 0;
 
-        // Rate limiter using JavaScript promises
-        function rateLimitedFetch(limit, time) {
-            let counter = 0;
+document.getElementById('fetchButton').addEventListener('click', () => {
+    clickCount++;
 
-            function executeFetch() {
-                if (counter < limit) {
-                    counter++;
-                    return fetchData();
-                } else {
-                    return new Promise(resolve => setTimeout(resolve, time))
-                        .then(() => {
-                            counter = 0;
-                            return executeFetch();
-                        });
-                }
-            }
+    // Display click count for 10 seconds
+    document.getElementById('clickCount').textContent = `Click Count: ${clickCount}`;
+    setTimeout(() => {
+        document.getElementById('clickCount').textContent = '';
+    }, 10000);
 
-            return executeFetch;
-        }
+    // Implement a rate limiter
+    rateLimit(() => fetchData());
+});
 
-        const fetchWithRateLimit = rateLimitedFetch(5, 1000); // 5 requests per second (1000ms)
+function rateLimit(callback) {
+    const maxRequests = 5;
+    const windowSize = 1000;
+    const startTime = new Date().getTime();
+    let requestCount = 0;
 
-        // Update click count and reset after 10 seconds
-        function updateClickCount() {
-            const clickCountElement = document.getElementById("clickCount");
-            let count = 0;
+    function checkLimit() {
+        const currentTime = new Date().getTime();
+        const elapsedTime = currentTime - startTime;
 
-            return function () {
-                count++;
-                clickCountElement.textContent = count;
-
+        if (elapsedTime < windowSize) {
+            if (requestCount < maxRequests) {
+                // If within the time window and under the request limit, make the API call
+                callback();
+                requestCount++;
+            } else {
+                // If over the request limit, delay the API call until the next window
                 setTimeout(() => {
-                    clickCountElement.textContent = "0";
-                    count = 0;
-                }, 10000); // 10 seconds
-            };
+                    callback();
+                    requestCount = 1;
+                }, windowSize - elapsedTime);
+            }
+        } else {
+            // If the time window has passed, reset the counters
+            startTime = currentTime;
+            requestCount = 1;
+            callback();
         }
+    }
 
-        const updateCount = updateClickCount();
+    checkLimit();
+}
 
-        // Event listener for the Fetch Data button
-        document.getElementById("fetchButton").addEventListener("click", () => {
-            updateCount();
-
-            fetchWithRateLimit()
-                .then(data => {
-                    // Display fetched data in the results div
-                    const resultsElement = document.getElementById("results");
-                    resultsElement.innerHTML += `<p>ID: ${data.id}, Title: ${data.title}, Completed: ${data.completed}</p>`;
-                })
-                .catch(error => console.error("Error fetching data:", error));
+function fetchData() {
+    fetch('https://jsonplaceholder.typicode.com/todos/1')
+        .then(response => response.json())
+        .then(data => {
+            displayData(data);
+        })
+        .catch(error => {
+            console.error('Error:', error);
         });
+}
+
+function displayData(data) {
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = `<p>ID: ${data.id}</p><p>Title: ${data.title}</p><p>Completed: ${data.completed}</p>`;
+}
